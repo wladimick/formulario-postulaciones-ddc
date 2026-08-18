@@ -81,6 +81,29 @@
             return null;
         };
 
+        const describeInvalidResponse = (response, rawBody) => {
+            const contentType = response.headers.get('content-type') || 'sin Content-Type';
+            const preview = String(rawBody || '')
+                .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+                .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+                .replace(/<[^>]+>/g, ' ')
+                .replace(/\s+/g, ' ')
+                .trim()
+                .slice(0, 180);
+
+            console.group('DDC Postulaciones · Respuesta inválida del servidor');
+            console.error('URL:', response.url);
+            console.error('HTTP:', response.status, response.statusText);
+            console.error('Content-Type:', contentType);
+            console.error('Respuesta completa:', rawBody);
+            console.groupEnd();
+
+            let message = `El servidor respondió HTTP ${response.status} (${contentType}) en vez de JSON.`;
+            if (preview) message += ` Inicio de respuesta: ${preview}`;
+            message += ' Revisa la consola del navegador para ver el detalle.';
+            return message;
+        };
+
         form.addEventListener('submit', async (event) => {
             event.preventDefault();
             clearErrors();
@@ -108,17 +131,18 @@
                     headers: { 'Accept': 'application/json' }
                 });
 
+                const rawBody = await response.text();
                 let payload;
                 try {
-                    payload = await response.json();
+                    payload = JSON.parse(rawBody);
                 } catch (_) {
-                    throw new Error('El servidor devolvió una respuesta inválida.');
+                    throw new Error(describeInvalidResponse(response, rawBody));
                 }
 
                 const data = payload?.data || {};
                 if (!response.ok || !payload?.success) {
                     if (data.errors) showErrors(data.errors);
-                    throw new Error(data.message || 'No fue posible enviar la postulación.');
+                    throw new Error(data.message || `No fue posible enviar la postulación (HTTP ${response.status}).`);
                 }
 
                 form.reset();
@@ -127,6 +151,7 @@
                 status.textContent = data.message || 'Postulación enviada correctamente.';
                 status.className = 'ddc-status is-success';
             } catch (error) {
+                console.error('DDC Postulaciones · Error de envío:', error);
                 status.textContent = error?.message || 'Ocurrió un error al enviar. Intenta nuevamente.';
                 status.className = 'ddc-status is-error';
             } finally {
