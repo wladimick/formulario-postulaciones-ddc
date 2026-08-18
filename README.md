@@ -59,6 +59,12 @@ En Nginx/PHP-FPM, define las variables en el pool de PHP-FPM o mediante el mecan
 - Consentimiento explícito de tratamiento de datos.
 - Interfaz accesible y responsive sin jQuery, Bootstrap ni `jsrsasign`.
 
+## Campos funcionales definidos por el cliente
+
+Se mantienen y procesan expresamente los campos incorporados por el cliente, incluyendo `Género`, `Estado Civil`, `Contacto de emergencia`, `Teléfono Contacto de Emergencia` y `Diseño Calle`. Están ubicados en las mismas secciones del formulario original, pasan por el backend y se incluyen en el correo enviado a RR.HH.
+
+Consulta [`docs/FORMULARIO.md`](docs/FORMULARIO.md) para el detalle de ubicación, obligatoriedad y validación de estos campos.
+
 ## Correo recibido por RR.HH.
 
 El correo HTML usa la identidad visual DDC, separa los datos en bloques legibles, destaca cargo y planta, informa claramente que el CV viene adjunto y configura `Reply-To` con el email de la persona postulante. Se mantiene también una versión de texto plano para clientes que no renderizan HTML.
@@ -86,5 +92,6 @@ Después, confirmar y versionar el `composer.json` y `composer.lock` regenerados
 
 ## Documentación de la mejora
 
-- [`docs/MEJORAS.md`](docs/MEJORAS.md): vulnerabilidades corregidas, cambios de UX y decisiones pendientes.
+- [`docs/MEJORAS.md`](docs/MEJORAS.md): vulnerabilidades corregidas, cambios funcionales y decisiones pendientes.
+- [`docs/FORMULARIO.md`](docs/FORMULARIO.md): diseño visual y campos funcionales del formulario.
 - [`docs/CORREO.md`](docs/CORREO.md): diseño y compatibilidad del correo de postulación.
