@@ -212,9 +212,11 @@ function buildEmailBody(array $data): string
 
     $personal = [
         'Nombre completo' => $fullName,
-        'Fecha de nacimiento' => $dateLabel,
-        'Nacionalidad' => $data['nacionalidad'],
         'RUT' => $data['rut'] ?: 'No informado',
+        'Fecha de nacimiento' => $dateLabel,
+        'Género' => $data['genero'],
+        'Estado civil' => $data['estadoCivil'],
+        'Nacionalidad' => $data['nacionalidad'],
     ];
     if ($data['nacionalidad'] === 'Extranjera') {
         $personal['País de origen'] = $data['paisDeOrigen'];
@@ -222,12 +224,15 @@ function buildEmailBody(array $data): string
     }
 
     $contact = [
-        'Email' => $data['email'],
-        'Celular' => $data['celular'],
         'Dirección' => trim($data['direccionCalle'] . ' ' . $data['direccionNumero']),
         'Villa / población' => $data['villaPoblacion'] ?: 'No informado',
         'Comuna' => $data['comuna'],
         'Región' => $data['region'],
+        'Celular' => $data['celular'],
+        'Email' => $data['email'],
+        'Contacto de emergencia' => $data['contactoDeEmergencia'] ?: 'No informado',
+        'Teléfono contacto de emergencia' => $data['telefonoContactoDeEmergencia'],
+        'Diseño Calle' => $data['disenoCalle'] ?: 'No informado',
     ];
 
     $application = [
@@ -259,7 +264,6 @@ function buildEmailBody(array $data): string
         . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;background:#F4F6F8;border-collapse:collapse;">'
         . '<tr><td align="center" style="padding:28px 12px;">'
         . '<table role="presentation" width="680" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:680px;border-collapse:separate;border-spacing:0;background:#FFFFFF;border-radius:14px;overflow:hidden;box-shadow:0 8px 28px rgba(44,46,101,.10);">'
-
         . '<tr><td style="padding:0;background:#003DA6;">'
         . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>'
         . '<td style="padding:24px 28px 20px 28px;vertical-align:middle;">'
@@ -269,35 +273,29 @@ function buildEmailBody(array $data): string
         . '<td align="right" style="padding:24px 28px 20px 12px;vertical-align:middle;color:#FFFFFF;font-size:12px;font-weight:600;">NUEVA POSTULACIÓN</td>'
         . '</tr><tr><td colspan="2" style="height:5px;background:#00C7B1;font-size:0;line-height:0;">&nbsp;</td></tr></table>'
         . '</td></tr>'
-
         . '<tr><td style="padding:30px 28px 12px 28px;">'
         . '<div style="color:#606060;font-size:13px;font-weight:500;text-transform:uppercase;letter-spacing:.8px;">Postulación recibida</div>'
         . '<div style="padding-top:4px;color:#003DA6;font-size:27px;line-height:1.2;font-weight:600;">' . escape($fullName) . '</div>'
         . '<div style="padding-top:8px;color:#2C2E65;font-size:16px;line-height:1.45;">Postula a <strong>' . escape($data['trabajoAlQuePostula']) . '</strong> en la planta <strong>' . escape($data['enQuePlantaDeseaTrabajar']) . '</strong>.</div>'
         . '</td></tr>'
-
         . '<tr><td style="padding:8px 28px 26px 28px;">'
         . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#EEF6FF;border-radius:10px;border-left:4px solid #0662FF;">'
         . '<tr><td style="padding:14px 16px;color:#2C2E65;font-size:13px;line-height:1.5;">'
         . '<strong style="color:#003DA6;">Currículum adjunto.</strong> Puedes responder directamente a este correo para contactar a ' . escape($data['nombres']) . '; el Reply-To apunta a <strong>' . escape($data['email']) . '</strong>.'
         . '</td></tr></table></td></tr>'
-
         . emailSection('Información personal', $personal)
         . emailSection('Contacto y ubicación', $contact)
         . emailSection('Postulación', $application)
         . emailSection('Formación y experiencia', $profile)
         . emailSection('Ropa de trabajo', $equipment)
-
         . '<tr><td style="padding:0 28px 28px 28px;">'
         . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#F8FAFD;border-radius:8px;">'
         . '<tr><td style="padding:13px 15px;color:#606060;font-size:11px;line-height:1.5;">La persona postulante declaró autorizar el tratamiento de estos datos para gestionar su postulación laboral. Este correo puede contener información personal; úsala únicamente para fines del proceso de selección.</td></tr>'
         . '</table></td></tr>'
-
         . '<tr><td style="padding:20px 28px;background:#2C2E65;text-align:center;">'
         . '<div style="color:#FFFFFF;font-size:13px;font-weight:600;">David Del Curto S.A.</div>'
         . '<div style="padding-top:4px;color:#BFD6F7;font-size:11px;line-height:1.5;">Postulaciones · Entregar buenos frutos</div>'
         . '</td></tr>'
-
         . '</table></td></tr></table></body></html>';
 }
 
@@ -331,6 +329,8 @@ $regions = [
     'Región del Biobío', 'Región de La Araucanía', 'Región de Los Ríos', 'Región de Los Lagos',
     'Región de Aysén del General Carlos Ibáñez del Campo', 'Región de Magallanes y de la Antártica Chilena',
 ];
+$genders = ['Femenino', 'Masculino'];
+$civilStatuses = ['Soltero', 'Casado', 'Viudo', 'Separado'];
 $plants = ['Requínoa', 'Romeral', 'Retiro'];
 $seasons = ['Nuevo', '1', '2', '3 o más'];
 $jobs = [
@@ -349,18 +349,23 @@ $sources = ['Redes sociales', 'Recomendación de un conocido', 'Sitio web de DDC
 $data = [
     'nombres' => cleanString('nombres', 80),
     'apellidos' => cleanString('apellidos', 80),
-    'fechaDeNacimiento' => cleanString('fechaDeNacimiento', 10),
-    'nacionalidad' => cleanString('nacionalidad', 20),
     'rut' => cleanString('rut', 12),
+    'fechaDeNacimiento' => cleanString('fechaDeNacimiento', 10),
+    'genero' => cleanString('genero', 20),
+    'estadoCivil' => cleanString('estadoCivil', 20),
+    'nacionalidad' => cleanString('nacionalidad', 20),
     'paisDeOrigen' => cleanString('paisDeOrigen', 80),
     'numeroDePasaporte' => cleanString('numeroDePasaporte', 40),
-    'email' => cleanString('email', 120),
-    'celular' => cleanString('celular', 24),
     'direccionCalle' => cleanString('direccionCalle', 120),
     'direccionNumero' => cleanString('direccionNumero', 20),
     'villaPoblacion' => cleanString('villaPoblacion', 120),
     'comuna' => cleanString('comuna', 80),
     'region' => cleanString('region', 100),
+    'celular' => cleanString('celular', 24),
+    'email' => cleanString('email', 120),
+    'contactoDeEmergencia' => cleanString('contactoDeEmergencia', 120),
+    'telefonoContactoDeEmergencia' => cleanString('telefonoContactoDeEmergencia', 24),
+    'disenoCalle' => cleanString('disenoCalle', 150),
     'enQuePlantaDeseaTrabajar' => cleanString('enQuePlantaDeseaTrabajar', 30),
     'temporadasTrabajadasEnDDC' => cleanString('temporadasTrabajadasEnDDC', 20),
     'trabajoAlQuePostula' => cleanString('trabajoAlQuePostula', 100),
@@ -378,13 +383,16 @@ $requiredLabels = [
     'nombres' => 'Ingresa tu nombre.',
     'apellidos' => 'Ingresa tus apellidos.',
     'fechaDeNacimiento' => 'Ingresa tu fecha de nacimiento.',
+    'genero' => 'Selecciona tu género.',
+    'estadoCivil' => 'Selecciona tu estado civil.',
     'nacionalidad' => 'Selecciona tu nacionalidad.',
-    'email' => 'Ingresa tu email.',
-    'celular' => 'Ingresa tu teléfono celular.',
     'direccionCalle' => 'Ingresa la calle de tu dirección.',
     'direccionNumero' => 'Ingresa el número de tu dirección.',
     'comuna' => 'Ingresa tu comuna.',
     'region' => 'Selecciona tu región.',
+    'celular' => 'Ingresa tu teléfono celular.',
+    'email' => 'Ingresa tu email.',
+    'telefonoContactoDeEmergencia' => 'Ingresa el teléfono del contacto de emergencia.',
     'enQuePlantaDeseaTrabajar' => 'Selecciona la planta donde deseas trabajar.',
     'temporadasTrabajadasEnDDC' => 'Indica cuántas temporadas has trabajado en DDC.',
     'trabajoAlQuePostula' => 'Selecciona el cargo al que postulas.',
@@ -429,7 +437,10 @@ if ($data['email'] !== '' && filter_var($data['email'], FILTER_VALIDATE_EMAIL) =
     $errors['email'] = 'Ingresa un email válido.';
 }
 if ($data['celular'] !== '' && !validPhone($data['celular'])) {
-    $errors['celular'] = 'Ingresa un teléfono válido.';
+    $errors['celular'] = 'Ingresa un teléfono celular válido.';
+}
+if ($data['telefonoContactoDeEmergencia'] !== '' && !validPhone($data['telefonoContactoDeEmergencia'])) {
+    $errors['telefonoContactoDeEmergencia'] = 'Ingresa un teléfono de contacto de emergencia válido.';
 }
 
 if ($data['fechaDeNacimiento'] !== '') {
@@ -442,6 +453,8 @@ if ($data['fechaDeNacimiento'] !== '') {
 }
 
 $enumChecks = [
+    'genero' => [$genders, 'El género seleccionado no es válido.'],
+    'estadoCivil' => [$civilStatuses, 'El estado civil seleccionado no es válido.'],
     'region' => [$regions, 'La región seleccionada no es válida.'],
     'enQuePlantaDeseaTrabajar' => [$plants, 'La planta seleccionada no es válida.'],
     'temporadasTrabajadasEnDDC' => [$seasons, 'La cantidad de temporadas no es válida.'],
@@ -485,17 +498,22 @@ if ($smtpUser === '' || $smtpPass === '' || $fromAddress === '' || $recipient ==
 $plainRows = [
     'Nombre(s)' => $data['nombres'],
     'Apellido(s)' => $data['apellidos'],
-    'Fecha de nacimiento' => $data['fechaDeNacimiento'],
-    'Nacionalidad' => $data['nacionalidad'],
     'RUT' => $data['rut'] ?: 'No informado',
+    'Fecha de nacimiento' => $data['fechaDeNacimiento'],
+    'Género' => $data['genero'],
+    'Estado civil' => $data['estadoCivil'],
+    'Nacionalidad' => $data['nacionalidad'],
     'País de origen' => $data['paisDeOrigen'] ?: 'No aplica',
     'Pasaporte/documento' => $data['numeroDePasaporte'] ?: 'No aplica',
-    'Email' => $data['email'],
-    'Celular' => $data['celular'],
     'Dirección' => trim($data['direccionCalle'] . ' ' . $data['direccionNumero']),
     'Villa / población' => $data['villaPoblacion'] ?: 'No informado',
     'Comuna' => $data['comuna'],
     'Región' => $data['region'],
+    'Celular' => $data['celular'],
+    'Email' => $data['email'],
+    'Contacto de emergencia' => $data['contactoDeEmergencia'] ?: 'No informado',
+    'Teléfono contacto de emergencia' => $data['telefonoContactoDeEmergencia'],
+    'Diseño Calle' => $data['disenoCalle'] ?: 'No informado',
     'Planta' => $data['enQuePlantaDeseaTrabajar'],
     'Temporadas en DDC' => $data['temporadasTrabajadasEnDDC'],
     'Cargo' => $data['trabajoAlQuePostula'],
