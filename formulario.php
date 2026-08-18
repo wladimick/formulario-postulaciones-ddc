@@ -132,11 +132,7 @@ header("Content-Security-Policy: default-src 'self'; script-src 'self'; style-sr
             padding:48px 26px 42px;
         }
 
-        .form-inner {
-            width:100%;
-            margin:0 auto;
-        }
-
+        .form-inner { width:100%; margin:0 auto; }
         form { margin:0; }
         fieldset { border:0; margin:0 0 28px; padding:0; min-width:0; }
         fieldset:last-of-type { margin-bottom:22px; }
@@ -160,6 +156,8 @@ header("Content-Security-Policy: default-src 'self'; script-src 'self'; style-sr
         }
         .field { grid-column:span 6; min-width:0; }
         .field.third { grid-column:span 4; }
+        .field.quarter { grid-column:span 3; }
+        .field.two-thirds { grid-column:span 8; }
         .field.full { grid-column:1/-1; }
 
         label {
@@ -186,18 +184,9 @@ header("Content-Security-Policy: default-src 'self'; script-src 'self'; style-sr
             font-size:.9rem;
             transition:border-color .15s ease, box-shadow .15s ease;
         }
-        select {
-            appearance:auto;
-            cursor:pointer;
-        }
-        textarea {
-            min-height:92px;
-            resize:vertical;
-        }
-        input[type="file"] {
-            min-height:42px;
-            padding:7px;
-        }
+        select { appearance:auto; cursor:pointer; }
+        textarea { min-height:92px; resize:vertical; }
+        input[type="file"] { min-height:42px; padding:7px; }
         input[type="checkbox"] {
             width:16px;
             height:16px;
@@ -294,7 +283,8 @@ header("Content-Security-Policy: default-src 'self'; script-src 'self'; style-sr
             .application-shell { width:min(100% - 24px, 1065px); margin-top:-48px; }
             .intro-banner { min-height:128px; padding:25px 22px; }
             .form-panel { padding:36px 20px 34px; }
-            .field.third { grid-column:span 6; }
+            .field.third,.field.quarter { grid-column:span 6; }
+            .field.two-thirds { grid-column:span 6; }
         }
 
         @media (max-width:620px) {
@@ -306,7 +296,7 @@ header("Content-Security-Policy: default-src 'self'; script-src 'self'; style-sr
             .form-panel { padding:32px 18px 36px; }
             fieldset { margin-bottom:30px; }
             legend { margin-bottom:18px; }
-            .field,.field.third { grid-column:1/-1; }
+            .field,.field.third,.field.quarter,.field.two-thirds { grid-column:1/-1; }
             .grid { row-gap:15px; }
             .required-note { margin-bottom:24px; }
         }
@@ -339,41 +329,65 @@ header("Content-Security-Policy: default-src 'self'; script-src 'self'; style-sr
                 <fieldset>
                     <legend>Información Personal</legend>
                     <div class="grid">
-                        <div class="field"><label for="nombres">Nombre(s) *</label><input type="text" id="nombres" name="nombres" autocomplete="given-name" maxlength="80" required></div>
-                        <div class="field"><label for="apellidos">Apellido(s) *</label><input type="text" id="apellidos" name="apellidos" autocomplete="family-name" maxlength="80" required></div>
-                        <div class="field third"><label for="fechaDeNacimiento">Fecha de nacimiento *</label><input type="date" id="fechaDeNacimiento" name="fechaDeNacimiento" autocomplete="bday" required></div>
-                        <div class="field third">
-                            <label for="nacionalidad">Nacionalidad *</label>
-                            <select id="nacionalidad" name="nacionalidad" required><option value="" selected disabled>Selecciona una opción</option><option value="Chilena">Chilena</option><option value="Extranjera">Extranjera</option></select>
-                        </div>
-                        <div class="field third">
+                        <div class="field third"><label for="nombres">Nombre(s) *</label><input type="text" id="nombres" name="nombres" autocomplete="given-name" maxlength="80" required></div>
+                        <div class="field two-thirds"><label for="apellidos">Apellido(s) *</label><input type="text" id="apellidos" name="apellidos" autocomplete="family-name" maxlength="80" required></div>
+
+                        <div class="field quarter">
                             <label for="rut">RUT <span id="rut-required-mark">*</span> <span class="optional" id="rut-help-label"></span></label>
                             <input type="text" id="rut" name="rut" autocomplete="off" inputmode="text" maxlength="12" placeholder="12.345.678-5">
                             <p class="help">Se valida el dígito verificador.</p>
                         </div>
+                        <div class="field quarter"><label for="fechaDeNacimiento">Fecha de nacimiento *</label><input type="date" id="fechaDeNacimiento" name="fechaDeNacimiento" autocomplete="bday" required></div>
+                        <div class="field quarter">
+                            <label for="genero">Género *</label>
+                            <select id="genero" name="genero" required>
+                                <option value="" selected disabled>Género</option>
+                                <option value="Femenino">Femenino</option>
+                                <option value="Masculino">Masculino</option>
+                            </select>
+                        </div>
+                        <div class="field quarter">
+                            <label for="estadoCivil">Estado Civil *</label>
+                            <select id="estadoCivil" name="estadoCivil" required>
+                                <option value="" selected disabled>Estado Civil</option>
+                                <option value="Soltero">Soltero</option>
+                                <option value="Casado">Casado</option>
+                                <option value="Viudo">Viudo</option>
+                                <option value="Separado">Separado</option>
+                            </select>
+                        </div>
+
+                        <div class="field third">
+                            <label for="nacionalidad">Nacionalidad *</label>
+                            <select id="nacionalidad" name="nacionalidad" required><option value="" selected disabled>Selecciona una opción</option><option value="Chilena">Chilena</option><option value="Extranjera">Extranjera</option></select>
+                        </div>
                     </div>
                     <div id="foreign-fields" class="grid foreign-fields" hidden>
-                        <div class="field"><label for="paisDeOrigen">País de origen *</label><input type="text" id="paisDeOrigen" name="paisDeOrigen" maxlength="80" autocomplete="country-name"></div>
-                        <div class="field"><label for="numeroDePasaporte">N.º de pasaporte/documento *</label><input type="text" id="numeroDePasaporte" name="numeroDePasaporte" maxlength="40" autocomplete="off"></div>
+                        <div class="field third"><label for="paisDeOrigen">País de origen *</label><input type="text" id="paisDeOrigen" name="paisDeOrigen" maxlength="80" autocomplete="country-name"></div>
+                        <div class="field third"><label for="numeroDePasaporte">N.º de pasaporte/documento *</label><input type="text" id="numeroDePasaporte" name="numeroDePasaporte" maxlength="40" autocomplete="off"></div>
                     </div>
                 </fieldset>
 
                 <fieldset>
                     <legend>Información de contacto</legend>
                     <div class="grid">
-                        <div class="field"><label for="direccionCalle">Dirección: Calle *</label><input type="text" id="direccionCalle" name="direccionCalle" autocomplete="address-line1" maxlength="120" required></div>
+                        <div class="field third"><label for="direccionCalle">Dirección: Calle *</label><input type="text" id="direccionCalle" name="direccionCalle" autocomplete="address-line1" maxlength="120" required></div>
                         <div class="field third"><label for="direccionNumero">Número *</label><input type="text" id="direccionNumero" name="direccionNumero" maxlength="20" required></div>
                         <div class="field third"><label for="villaPoblacion">Villa / población <span class="optional">(opcional)</span></label><input type="text" id="villaPoblacion" name="villaPoblacion" autocomplete="address-line2" maxlength="120"></div>
                         <div class="field third"><label for="comuna">Comuna *</label><input type="text" id="comuna" name="comuna" autocomplete="address-level2" maxlength="80" required></div>
-                        <div class="field">
+                        <div class="field third">
                             <label for="region">Región *</label>
                             <select id="region" name="region" autocomplete="address-level1" required>
                                 <option value="" selected disabled>Selecciona una región</option>
                                 <option>Región de Arica y Parinacota</option><option>Región de Tarapacá</option><option>Región de Antofagasta</option><option>Región de Atacama</option><option>Región de Coquimbo</option><option>Región de Valparaíso</option><option>Región Metropolitana de Santiago</option><option>Región del Libertador General Bernardo O'Higgins</option><option>Región del Maule</option><option>Región de Ñuble</option><option>Región del Biobío</option><option>Región de La Araucanía</option><option>Región de Los Ríos</option><option>Región de Los Lagos</option><option>Región de Aysén del General Carlos Ibáñez del Campo</option><option>Región de Magallanes y de la Antártica Chilena</option>
                             </select>
                         </div>
+                        <div class="field"></div>
                         <div class="field"><label for="celular">Teléfono Celular *</label><input type="tel" id="celular" name="celular" autocomplete="tel" maxlength="24" placeholder="+56 9 1234 5678" required></div>
                         <div class="field"><label for="email">Email *</label><input type="email" id="email" name="email" autocomplete="email" maxlength="120" required></div>
+                        <div class="field"><label for="contactoDeEmergencia">Contacto de emergencia (nombre completo)</label><input type="text" id="contactoDeEmergencia" name="contactoDeEmergencia" maxlength="120"></div>
+                        <div class="field"><label for="telefonoContactoDeEmergencia">Teléfono Contacto de Emergencia *</label><input type="tel" id="telefonoContactoDeEmergencia" name="telefonoContactoDeEmergencia" maxlength="24" placeholder="9 12345678" required></div>
+                        <div class="field two-thirds"><label for="disenoCalle">Diseño Calle</label><input type="text" id="disenoCalle" name="disenoCalle" maxlength="150"></div>
                     </div>
                 </fieldset>
 
