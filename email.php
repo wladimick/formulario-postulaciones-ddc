@@ -1,14 +1,15 @@
 <?php
 declare(strict_types=1);
 
-use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
+use PHPMailer\PHPMailer\PHPMailer;
 
 require __DIR__ . '/vendor/autoload.php';
 
 const MAX_CV_BYTES = 8 * 1024 * 1024;
 const RATE_LIMIT_ATTEMPTS = 5;
 const RATE_LIMIT_WINDOW_SECONDS = 900;
+const DEFAULT_PRIVATE_CONFIG_PATH = '/home/daviddelcurtotib/ddc-form-config.php';
 
 if (session_status() !== PHP_SESSION_ACTIVE) {
     session_set_cookie_params([
@@ -34,15 +35,28 @@ function cleanString(string $key, int $maxLength = 255): string
 {
     $value = isset($_POST[$key]) && is_string($_POST[$key]) ? $_POST[$key] : '';
     $value = trim(str_replace("\0", '', $value));
+
     if (mb_strlen($value) > $maxLength) {
         $value = mb_substr($value, 0, $maxLength);
     }
+
     return $value;
 }
 
 function escape(string $value): string
 {
     return htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+}
+
+function allowedValue(string $value, array $allowed): bool
+{
+    return in_array($value, $allowed, true);
+}
+
+function validPhone(string $phone): bool
+{
+    $digits = preg_replace('/\D+/', '', $phone) ?? '';
+    return strlen($digits) >= 8 && strlen($digits) <= 15;
 }
 
 function validRut(string $rut): bool
@@ -67,22 +81,12 @@ function validRut(string $rut): bool
     return hash_equals($expectedDv, $providedDv);
 }
 
-function validPhone(string $phone): bool
-{
-    $digits = preg_replace('/\D+/', '', $phone) ?? '';
-    return strlen($digits) >= 8 && strlen($digits) <= 15;
-}
-
-function allowedValue(string $value, array $allowed): bool
-{
-    return in_array($value, $allowed, true);
-}
-
 function enforceRateLimit(string $key): void
 {
     $file = sys_get_temp_dir() . '/ddc-form-rate-' . hash('sha256', $key) . '.json';
     $now = time();
     $handle = @fopen($file, 'c+');
+
     if ($handle === false) {
         return;
     }
@@ -93,11 +97,11 @@ function enforceRateLimit(string $key): void
         }
 
         $raw = stream_get_contents($handle);
-        $data = $raw ? json_decode($raw, true) : null;
-        $attempts = is_array($data['attempts'] ?? null) ? $data['attempts'] : [];
+        $stored = $raw ? json_decode($raw, true) : null;
+        $attempts = is_array($stored['attempts'] ?? null) ? $stored['attempts'] : [];
         $attempts = array_values(array_filter(
             $attempts,
-            static fn($ts) => is_int($ts) && $ts > $now - RATE_LIMIT_WINDOW_SECONDS
+            static fn($timestamp): bool => is_int($timestamp) && $timestamp > $now - RATE_LIMIT_WINDOW_SECONDS
         ));
 
         if (count($attempts) >= RATE_LIMIT_ATTEMPTS) {
@@ -127,8 +131,9 @@ function validateCv(array &$errors): ?array
 
     $file = $_FILES['curriculum'];
     $error = (int)($file['error'] ?? UPLOAD_ERR_NO_FILE);
+
     if ($error !== UPLOAD_ERR_OK) {
-        $errors['curriculum'] = $error === UPLOAD_ERR_INI_SIZE || $error === UPLOAD_ERR_FORM_SIZE
+        $errors['curriculum'] = in_array($error, [UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE], true)
             ? 'El currículum supera el tamaño máximo de 8 MB.'
             : 'No fue posible recibir el currículum.';
         return null;
@@ -149,6 +154,7 @@ function validateCv(array &$errors): ?array
     $originalName = basename((string)($file['name'] ?? 'curriculum'));
     $extension = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
     $allowedExtensions = ['pdf', 'doc', 'docx'];
+
     if (!in_array($extension, $allowedExtensions, true)) {
         $errors['curriculum'] = 'El currículum debe ser PDF, DOC o DOCX.';
         return null;
@@ -174,9 +180,44 @@ function validateCv(array &$errors): ?array
     ];
 }
 
+function loadPrivateConfig(): array
+{
+    $configuredPath = getenv('DDC_FORM_CONFIG');
+    $path = is_string($configuredPath) && $configuredPath !== ''
+        ? $configuredPath
+        : DEFAULT_PRIVATE_CONFIG_PATH;
+
+    if (!is_readable($path)) {
+        return [];
+    }
+
+    try {
+        $loaded = require $path;
+        return is_array($loaded) ? $loaded : [];
+    } catch (Throwable $e) {
+        error_log('Formulario DDC: no se pudo leer la configuración privada: ' . $e->getMessage());
+        return [];
+    }
+}
+
+function configValue(array $config, string $key, mixed $default = ''): mixed
+{
+    if (array_key_exists($key, $config) && $config[$key] !== null && $config[$key] !== '') {
+        return $config[$key];
+    }
+
+    $environmentValue = getenv($key);
+    if ($environmentValue !== false && $environmentValue !== '') {
+        return $environmentValue;
+    }
+
+    return $default;
+}
+
 function emailRows(array $rows): string
 {
     $html = '';
+
     foreach ($rows as $label => $value) {
         $html .= '<tr>'
             . '<td style="padding:12px 14px;border-bottom:1px solid #E8EEF7;width:38%;vertical-align:top;color:#606060;font-size:13px;font-weight:600;line-height:1.4;">'
@@ -187,6 +228,7 @@ function emailRows(array $rows): string
             . '</td>'
             . '</tr>';
     }
+
     return $html;
 }
 
@@ -206,6 +248,7 @@ function buildEmailBody(array $data): string
     $fullName = trim($data['nombres'] . ' ' . $data['apellidos']);
     $dateLabel = $data['fechaDeNacimiento'];
     $birthDate = DateTimeImmutable::createFromFormat('!Y-m-d', $data['fechaDeNacimiento']);
+
     if ($birthDate instanceof DateTimeImmutable) {
         $dateLabel = $birthDate->format('d/m/Y');
     }
@@ -218,6 +261,7 @@ function buildEmailBody(array $data): string
         'Estado civil' => $data['estadoCivil'],
         'Nacionalidad' => $data['nacionalidad'],
     ];
+
     if ($data['nacionalidad'] === 'Extranjera') {
         $personal['País de origen'] = $data['paisDeOrigen'];
         $personal['Pasaporte / documento'] = $data['numeroDePasaporte'];
@@ -310,6 +354,7 @@ if ($contentLength > MAX_CV_BYTES + 1024 * 1024) {
 
 $sessionToken = isset($_SESSION['csrf_token']) && is_string($_SESSION['csrf_token']) ? $_SESSION['csrf_token'] : '';
 $postedToken = cleanString('csrf_token', 128);
+
 if ($sessionToken === '' || $postedToken === '' || !hash_equals($sessionToken, $postedToken)) {
     respond(403, ['ok' => false, 'message' => 'La sesión del formulario expiró. Recarga la página e intenta nuevamente.']);
 }
@@ -425,9 +470,11 @@ if ($data['nacionalidad'] === 'Chilena') {
     if ($data['rut'] !== '' && !validRut($data['rut'])) {
         $errors['rut'] = 'El RUT ingresado no es válido.';
     }
+
     if ($data['paisDeOrigen'] === '') {
         $errors['paisDeOrigen'] = 'Ingresa tu país de origen.';
     }
+
     if ($data['numeroDePasaporte'] === '') {
         $errors['numeroDePasaporte'] = 'Ingresa tu número de pasaporte o documento.';
     }
@@ -436,9 +483,11 @@ if ($data['nacionalidad'] === 'Chilena') {
 if ($data['email'] !== '' && filter_var($data['email'], FILTER_VALIDATE_EMAIL) === false) {
     $errors['email'] = 'Ingresa un email válido.';
 }
+
 if ($data['celular'] !== '' && !validPhone($data['celular'])) {
     $errors['celular'] = 'Ingresa un teléfono celular válido.';
 }
+
 if ($data['telefonoContactoDeEmergencia'] !== '' && !validPhone($data['telefonoContactoDeEmergencia'])) {
     $errors['telefonoContactoDeEmergencia'] = 'Ingresa un teléfono de contacto de emergencia válido.';
 }
@@ -446,7 +495,9 @@ if ($data['telefonoContactoDeEmergencia'] !== '' && !validPhone($data['telefonoC
 if ($data['fechaDeNacimiento'] !== '') {
     $date = DateTimeImmutable::createFromFormat('!Y-m-d', $data['fechaDeNacimiento']);
     $dateErrors = DateTimeImmutable::getLastErrors();
-    $invalidDate = $date === false || ($dateErrors !== false && ($dateErrors['warning_count'] > 0 || $dateErrors['error_count'] > 0));
+    $invalidDate = $date === false
+        || ($dateErrors !== false && ($dateErrors['warning_count'] > 0 || $dateErrors['error_count'] > 0));
+
     if ($invalidDate || $date > new DateTimeImmutable('today') || $date < new DateTimeImmutable('1900-01-01')) {
         $errors['fechaDeNacimiento'] = 'Ingresa una fecha de nacimiento válida.';
     }
@@ -463,9 +514,10 @@ $enumChecks = [
     'tallaDePantalon' => [$clothingSizes, 'La talla de pantalón no es válida.'],
     'tallaDePolera' => [$clothingSizes, 'La talla de polera no es válida.'],
     'numeroDeCalzado' => [$shoeSizes, 'El número de calzado no es válido.'],
-    'nivelEducacional' => [$education, 'El nivel educacional no es válido.'],
+    'nivelEducacional' => [$education, 'El nivel educacional seleccionado no es válido.'],
     'comoSeEnteroDelTrabajo' => [$sources, 'La fuente seleccionada no es válida.'],
 ];
+
 foreach ($enumChecks as $field => [$allowed, $message]) {
     if ($data[$field] !== '' && !allowedValue($data[$field], $allowed)) {
         $errors[$field] = $message;
@@ -481,17 +533,18 @@ if ($errors !== []) {
     respond(422, ['ok' => false, 'message' => 'Revisa los datos ingresados.', 'errors' => $errors]);
 }
 
-$smtpHost = getenv('SMTP_HOST') ?: 'smtp.gmail.com';
-$smtpPort = (int)(getenv('SMTP_PORT') ?: 465);
-$smtpUser = getenv('SMTP_USER') ?: '';
-$smtpPass = getenv('SMTP_PASS') ?: '';
-$smtpSecure = strtolower(getenv('SMTP_SECURE') ?: 'ssl');
-$fromAddress = getenv('SMTP_FROM') ?: $smtpUser;
-$fromName = getenv('SMTP_FROM_NAME') ?: 'David Del Curto - Postulaciones';
-$recipient = getenv('APPLICATION_RECIPIENT') ?: '';
+$privateConfig = loadPrivateConfig();
+$smtpHost = (string)configValue($privateConfig, 'SMTP_HOST', 'smtp.gmail.com');
+$smtpPort = (int)configValue($privateConfig, 'SMTP_PORT', 465);
+$smtpUser = (string)configValue($privateConfig, 'SMTP_USER', '');
+$smtpPass = (string)configValue($privateConfig, 'SMTP_PASS', '');
+$smtpSecure = strtolower((string)configValue($privateConfig, 'SMTP_SECURE', 'ssl'));
+$fromAddress = (string)configValue($privateConfig, 'SMTP_FROM', $smtpUser);
+$fromName = (string)configValue($privateConfig, 'SMTP_FROM_NAME', 'David Del Curto - Postulaciones');
+$recipient = (string)configValue($privateConfig, 'APPLICATION_RECIPIENT', '');
 
 if ($smtpUser === '' || $smtpPass === '' || $fromAddress === '' || $recipient === '') {
-    error_log('Formulario DDC: faltan variables SMTP_USER, SMTP_PASS, SMTP_FROM o APPLICATION_RECIPIENT.');
+    error_log('Formulario DDC: faltan datos SMTP o APPLICATION_RECIPIENT en la configuración privada/entorno.');
     respond(500, ['ok' => false, 'message' => 'El servicio de postulaciones no está configurado correctamente.']);
 }
 
@@ -535,7 +588,9 @@ try {
     $mail->Username = $smtpUser;
     $mail->Password = $smtpPass;
     $mail->Port = $smtpPort;
-    $mail->SMTPSecure = $smtpSecure === 'tls' ? PHPMailer::ENCRYPTION_STARTTLS : PHPMailer::ENCRYPTION_SMTPS;
+    $mail->SMTPSecure = $smtpSecure === 'tls'
+        ? PHPMailer::ENCRYPTION_STARTTLS
+        : PHPMailer::ENCRYPTION_SMTPS;
     $mail->setFrom($fromAddress, $fromName);
     $mail->addAddress($recipient);
     $mail->addReplyTo($data['email'], trim($data['nombres'] . ' ' . $data['apellidos']));
