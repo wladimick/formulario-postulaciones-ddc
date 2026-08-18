@@ -63,6 +63,8 @@ En Nginx/PHP-FPM, define las variables en el pool de PHP-FPM o mediante el mecan
 
 Se mantienen y procesan expresamente los campos incorporados por el cliente, incluyendo `Género`, `Estado Civil`, `Contacto de emergencia`, `Teléfono Contacto de Emergencia` y `Diseño Calle`. Están ubicados en las mismas secciones del formulario original, pasan por el backend y se incluyen en el correo enviado a RR.HH.
 
+Estos campos **no deben eliminarse como parte de una refactorización técnica o visual** sin una nueva indicación del cliente.
+
 Consulta [`docs/FORMULARIO.md`](docs/FORMULARIO.md) para el detalle de ubicación, obligatoriedad y validación de estos campos.
 
 ## Correo recibido por RR.HH.
