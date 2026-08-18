@@ -2,7 +2,7 @@
 
 ## Resumen
 
-Esta versión reemplaza el flujo anterior basado en un JWT firmado en el navegador por un POST estándar y protegido desde el servidor. También reduce la recolección de datos personales, corrige errores funcionales y endurece el tratamiento del currículum.
+Esta versión reemplaza el flujo anterior basado en un JWT firmado en el navegador por un POST estándar y protegido desde el servidor. Corrige errores funcionales, endurece el tratamiento del currículum y mantiene los campos funcionales definidos por el cliente.
 
 ## Seguridad
 
@@ -37,6 +37,8 @@ Esta versión reemplaza el flujo anterior basado en un JWT firmado en el navegad
 ### Validación y escape
 
 Todos los campos críticos se validan en `email.php`, incluso si el navegador es omitido. Los valores de selección se comparan contra listas permitidas y los textos se escapan antes de generar HTML del correo.
+
+Los campos añadidos por el cliente también están cubiertos por este flujo. `Género` y `Estado Civil` se validan contra listas permitidas; el teléfono de contacto de emergencia se valida como teléfono; y los valores de texto libre se limitan en longitud y se escapan antes de incluirse en el correo.
 
 ### Anti-abuso
 
@@ -76,23 +78,32 @@ El rate limit actual usa almacenamiento temporal local. Para despliegues con má
 
 **Ahora:** es obligatorio tanto en el navegador como en el servidor.
 
-## Privacidad y minimización de datos
+## Campos definidos por el cliente
 
-Se retiraron del formulario inicial:
+En una primera revisión se propuso retirar algunos campos por criterios de minimización de datos. Posteriormente se confirmó que dichos campos fueron agregados expresamente por el cliente y forman parte del requerimiento del formulario, por lo que se reincorporaron y se mantienen.
 
-- género;
-- estado civil;
-- “Diseño Calle” (campo accidental/remanente);
-- contacto y teléfono de emergencia.
+Los campos son:
 
-El contacto de emergencia corresponde mejor a una etapa posterior a la contratación y además implica tratar datos de una tercera persona. Género y estado civil no son necesarios para enviar una postulación laboral inicial.
+- `Género` — obligatorio;
+- `Estado Civil` — obligatorio;
+- `Contacto de emergencia (nombre completo)` — opcional;
+- `Teléfono Contacto de Emergencia` — obligatorio;
+- `Diseño Calle` — opcional y conservando la denominación original del cliente.
 
-Se añadió una casilla obligatoria de consentimiento para el tratamiento de los datos del proceso. RR.HH./legal debe validar el texto final y vincular la política corporativa vigente antes del lanzamiento.
+Además de aparecer nuevamente en su posición original dentro de la interfaz, estos campos:
+
+- se envían mediante `FormData`;
+- se limpian y limitan en longitud en `email.php`;
+- se validan cuando corresponde;
+- se incluyen en la versión HTML del correo de RR.HH.;
+- se incluyen en la versión de texto plano del correo.
+
+Se mantiene la casilla obligatoria de consentimiento para el tratamiento de los datos del proceso. RR.HH./legal debe validar el texto final y vincular la política corporativa vigente antes del lanzamiento.
 
 ## Experiencia de usuario y accesibilidad
 
 - documento en `es-CL`;
-- diseño responsive sin dependencias externas;
+- diseño responsive con identidad visual DDC;
 - fecha de nacimiento mediante `input type="date"`;
 - etiquetas y ayudas claras;
 - estados de carga y éxito sin `alert()`;
@@ -113,4 +124,4 @@ La credencial SMTP que apareció en el commit original debe ser revocada. Tambi�
 
 ### Recomendación futura
 
-En una evolución posterior, la mejor arquitectura de privacidad sería almacenar las postulaciones en un sistema protegido y enviar a RR.HH. solo una notificación/enlace, en lugar de distribuir todos los datos personales y el CV por correo electrónico.
+En una evolución posterior, si el cliente lo considera apropiado, puede evaluarse almacenar las postulaciones en un sistema protegido y enviar a RR.HH. solo una notificación/enlace, en lugar de distribuir todos los datos personales y el CV por correo electrónico.
