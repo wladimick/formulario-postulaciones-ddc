@@ -2,7 +2,7 @@
 
 ## Objetivo
 
-El formulario conserva las mejoras de seguridad, validación y privacidad de la nueva versión, pero recupera la identidad visual de la página de postulaciones DDC usada como referencia.
+El formulario conserva las mejoras de seguridad y validación de la nueva versión, pero recupera la identidad visual de la página de postulaciones DDC usada como referencia y mantiene los campos definidos por el cliente.
 
 ## Cambios visuales
 
@@ -13,13 +13,23 @@ El formulario conserva las mejoras de seguridad, validación y privacidad de la 
 - Títulos de sección en azul corporativo `#003DA6`.
 - Tipografía `Titillium Web`, coherente con el sitio DDC, con fallback Arial.
 - Campos más compactos, bordes discretos y radios mínimos para acercarse al diseño original.
-- Distribución de 2 y 3 columnas en escritorio y apilado en pantallas pequeñas.
+- Distribución de 2, 3 y 4 columnas en escritorio y apilado en pantallas pequeñas.
 - Botón de envío azul similar al utilizado en el sitio corporativo.
 - Estados de error, foco, accesibilidad y validación se mantienen visibles sin romper la estética.
 
-## Campos
+## Campos definidos por el cliente
 
-El rediseño es únicamente visual. No se reincorporaron campos retirados por privacidad o por ser remanentes del formulario anterior, como género, estado civil, contacto de emergencia o “Diseño Calle”.
+Tras confirmar que forman parte del requerimiento funcional, se conservaron/reincorporaron en su ubicación original:
+
+- `Género` — obligatorio.
+- `Estado Civil` — obligatorio.
+- `Contacto de emergencia (nombre completo)` — opcional, tal como estaba definido originalmente.
+- `Teléfono Contacto de Emergencia` — obligatorio.
+- `Diseño Calle` — opcional, conservando el nombre entregado por el cliente.
+
+Estos campos viajan en el mismo `FormData`, se procesan y escapan en el servidor y se incorporan al correo recibido por RR.HH. Los campos con opciones cerradas (`Género` y `Estado Civil`) se validan además contra listas permitidas en `email.php`.
+
+La distribución recupera el orden de la referencia original: Género y Estado Civil junto a RUT/fecha de nacimiento; contacto y teléfono de emergencia dentro de Información de contacto; y Diseño Calle inmediatamente después.
 
 ## Imagen de cabecera
 
@@ -28,5 +38,5 @@ La cabecera utiliza la fotografía de equipo DDC que corresponde a la referencia
 ## Responsive
 
 - Escritorio: contenedor de hasta 1065 px con varias columnas.
-- Tablet: los campos de tres columnas pasan a dos columnas cuando es necesario.
+- Tablet: los campos de tres/cuatro columnas pasan a dos columnas cuando es necesario.
 - Móvil: todos los campos se muestran en una sola columna y el bloque de cabecera ocupa todo el ancho.
