@@ -39,6 +39,18 @@ El mensaje se organiza en:
 
 El correo muestra país de origen y pasaporte/documento únicamente cuando la nacionalidad seleccionada es extranjera.
 
+## Campos definidos por el cliente
+
+Además de los datos generales, el correo incluye los campos que el cliente confirmó como parte del requerimiento funcional:
+
+- Género.
+- Estado Civil.
+- Contacto de emergencia.
+- Teléfono Contacto de Emergencia.
+- Diseño Calle.
+
+Estos valores pasan por la limpieza y validación del backend antes de insertarse en el mensaje. Los textos se escapan antes de generar HTML y los mismos campos se incluyen en `AltBody` para la versión de texto plano.
+
 ## Compatibilidad de correo
 
 El HTML usa tablas de presentación y estilos inline de forma deliberada. Aunque no es el patrón habitual de una aplicación web moderna, sigue siendo la técnica más compatible para email HTML, especialmente con versiones de Outlook que no interpretan correctamente Flexbox, Grid ni gran parte del CSS moderno.
