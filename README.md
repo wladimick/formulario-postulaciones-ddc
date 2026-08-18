@@ -59,6 +59,12 @@ En Nginx/PHP-FPM, define las variables en el pool de PHP-FPM o mediante el mecan
 - Consentimiento explícito de tratamiento de datos.
 - Interfaz accesible y responsive sin jQuery, Bootstrap ni `jsrsasign`.
 
+## Correo recibido por RR.HH.
+
+El correo HTML usa la identidad visual DDC, separa los datos en bloques legibles, destaca cargo y planta, informa claramente que el CV viene adjunto y configura `Reply-To` con el email de la persona postulante. Se mantiene también una versión de texto plano para clientes que no renderizan HTML.
+
+Consulta [`docs/CORREO.md`](docs/CORREO.md) para la paleta, estructura y decisiones de compatibilidad del template.
+
 ## Antes de producción
 
 1. **Revocar inmediatamente la contraseña SMTP que estuvo publicada en el historial Git.** Cambiar el archivo actual no invalida una credencial ya expuesta.
@@ -80,4 +86,5 @@ Después, confirmar y versionar el `composer.json` y `composer.lock` regenerados
 
 ## Documentación de la mejora
 
-Consulta [`docs/MEJORAS.md`](docs/MEJORAS.md) para el detalle de vulnerabilidades corregidas, cambios de UX y decisiones pendientes.
+- [`docs/MEJORAS.md`](docs/MEJORAS.md): vulnerabilidades corregidas, cambios de UX y decisiones pendientes.
+- [`docs/CORREO.md`](docs/CORREO.md): diseño y compatibilidad del correo de postulación.
