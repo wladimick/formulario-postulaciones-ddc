@@ -2,6 +2,13 @@
 if (!defined('ABSPATH')) {
     exit;
 }
+
+$ddcPluginUrl = DDC_POSTULACIONES_URL;
+$ddcWpContentMarker = '/wp-content/';
+$ddcWpContentPos = strpos($ddcPluginUrl, $ddcWpContentMarker);
+$ddcAjaxUrl = $ddcWpContentPos !== false
+    ? substr($ddcPluginUrl, 0, $ddcWpContentPos) . '/wp-admin/admin-ajax.php'
+    : admin_url('admin-ajax.php');
 ?>
 <div class="ddc-postulaciones">
     <div class="ddc-photo-hero" role="img" aria-label="Equipo de David Del Curto"></div>
@@ -15,7 +22,7 @@ if (!defined('ABSPATH')) {
         <section class="ddc-form-panel">
             <div id="ddc-error-summary" class="ddc-error-summary" role="alert" tabindex="-1" hidden></div>
 
-            <form id="ddc-postulaciones-form" action="<?php echo esc_url(admin_url('admin-ajax.php')); ?>" method="post" enctype="multipart/form-data" novalidate>
+            <form id="ddc-postulaciones-form" action="<?php echo esc_url($ddcAjaxUrl); ?>" method="post" enctype="multipart/form-data" novalidate>
                 <input type="hidden" name="action" value="ddc_submit_application">
                 <?php wp_nonce_field('ddc_postulacion_submit', 'ddc_nonce'); ?>
                 <input type="hidden" name="MAX_FILE_SIZE" value="8388608">
