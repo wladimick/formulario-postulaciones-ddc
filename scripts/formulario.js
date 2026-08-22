@@ -1,77 +1,155 @@
-$( document ).ready(function() {
-    $('#formulario').submit(function(e) {
-        e.preventDefault();
-        $("#modalCargando").modal("show");
+(() => {
+    'use strict';
 
-        var fileInput = $('#curriculum')[0];
-        // if (fileInput.files.length === 0) {
-        //     alert("Por favor suba un archivo.");
-        //     return;
-        // }
+    const MAX_FILE_SIZE = 8 * 1024 * 1024;
+    const ALLOWED_EXTENSIONS = ['pdf', 'doc', 'docx'];
 
-        // Create FormData object and append the file
-        var formData = new FormData();
-        formData.append('curriculum', fileInput.files[0]);
+    document.addEventListener('DOMContentLoaded', () => {
+        const form = document.getElementById('formulario');
+        if (!form) return;
 
-        // Header
-        var oHeader = {alg: 'HS256', typ: 'JWT'};
-        // Payload
-        var oPayload = {};
-        var tNow = KJUR.jws.IntDate.get('now');
-        var tEnd = KJUR.jws.IntDate.get('now + 1day');
+        const nationality = document.getElementById('nacionalidad');
+        const foreignFields = document.getElementById('foreign-fields');
+        const country = document.getElementById('paisDeOrigen');
+        const passport = document.getElementById('numeroDePasaporte');
+        const rut = document.getElementById('rut');
+        const rutRequiredMark = document.getElementById('rut-required-mark');
+        const rutHelpLabel = document.getElementById('rut-help-label');
+        const fileInput = document.getElementById('curriculum');
+        const submitButton = document.getElementById('submit-button');
+        const status = document.getElementById('form-status');
+        const summary = document.getElementById('error-summary');
+        const csrfInput = document.getElementById('csrf_token');
 
-        oPayload.nombres = $("#nombres").val();
-        oPayload.apellidos = $("#apellidos").val();
-        oPayload.fechaDeNacimiento = $("#fechaDeNacimiento").val();
-        oPayload.genero = $("#genero").val();
-        oPayload.estadoCivil = $("#estadoCivil").val();
-        oPayload.nacionalidad = $("#nacionalidad").val();
-        oPayload.paisDeOrigen = $("#paisDeOrigen").val();
-        oPayload.numeroDePasaporte = $("#numeroDePasaporte").val();
-        oPayload.direccionCalle = $("#direccionCalle").val();
-        oPayload.direccionNumero = $("#direccionNumero").val();
-        oPayload.villaPoblacion = $("#villaPoblacion").val();
-        oPayload.comuna = $("#comuna").val();
-        oPayload.region = $("#region").val();
-        oPayload.celular = $("#celular").val();
-        oPayload.email = $("#email").val();
-        oPayload.contactoDeEmergencia = $("#contactoDeEmergencia").val();
-        oPayload.telefonoContactoDeEmergencia = $("#telefonoContactoDeEmergencia").val();
-        oPayload.disenoCalle = $("#disenoCalle").val();
-        oPayload.enQuePlantaDeseaTrabajar = $("#enQuePlantaDeseaTrabajar").val();
-        oPayload.temporadasTrabajadasEnDDC = $("#temporadasTrabajadasEnDDC").val();
-        oPayload.trabajoAlQuePostula = $("#trabajoAlQuePostula").val();
-        oPayload.disponibilidadDeTurnos = $("#disponibilidadDeTurnos").val();
-        oPayload.tallaDePantalon = $("input[name=tallaDePantalon]:checked", "#formulario").val();
-        oPayload.tallaDePolera = $("input[name=tallaDePolera]:checked", "#formulario").val();
-        oPayload.numeroDeCalzado = $("#numeroDeCalzado").val();
-        oPayload.nivelEducacional = $("#nivelEducacional").val();
-        oPayload.experienciasLaboralesPrevias = $("#experienciasLaboralesPrevias").val();
-        oPayload.comoSeEnteroDelTrabajo = $("#comoSeEnteroDelTrabajo").val();
+        const updateNationalityFields = () => {
+            const isForeign = nationality.value === 'Extranjera';
+            foreignFields.hidden = !isForeign;
+            country.required = isForeign;
+            passport.required = isForeign;
+            rut.required = !isForeign;
+            rutRequiredMark.hidden = isForeign;
+            rutHelpLabel.textContent = isForeign ? '(si tienes)' : '';
 
-        // Sign JWT
-        var sHeader = JSON.stringify(oHeader);
-        var sPayload = JSON.stringify(oPayload);
-        var sJWT = KJUR.jws.JWS.sign("HS256", sHeader, sPayload, {rstr: "secret"});
-        
-        $.ajax({
-            type: "POST",
-            url: "email.php",
-            headers: {
-              'Authorization': 'Bearer ' + sJWT
-            },
-            data: formData,
-            processData: false,
-            contentType: false,
-            success: function (response) { 
-                console.log(response);
-                alert(response);
-                $("#modalCargando").modal("hide");
-            },
-            error: function (ajaxresult, status) { 
-                alert("Error al enviar solicitud AJAX."); 
-                $("#modalCargando").modal("hide");
+            if (!isForeign) {
+                country.value = '';
+                passport.value = '';
             }
-       });
+        };
+
+        nationality.addEventListener('change', updateNationalityFields);
+        updateNationalityFields();
+
+        const clearErrors = () => {
+            summary.hidden = true;
+            summary.innerHTML = '';
+            form.querySelectorAll('[aria-invalid="true"]').forEach((field) => {
+                field.removeAttribute('aria-invalid');
+            });
+            status.textContent = '';
+            status.className = 'status';
+        };
+
+        const showErrors = (errors) => {
+            const entries = Object.entries(errors || {});
+            if (!entries.length) return;
+
+            const list = document.createElement('ul');
+            let firstField = null;
+
+            entries.forEach(([fieldName, message]) => {
+                const item = document.createElement('li');
+                item.textContent = message;
+                list.appendChild(item);
+
+                const field = form.elements.namedItem(fieldName);
+                if (field && field instanceof HTMLElement) {
+                    field.setAttribute('aria-invalid', 'true');
+                    if (!firstField) firstField = field;
+                }
+            });
+
+            const title = document.createElement('h2');
+            title.textContent = 'Revisa los siguientes campos:';
+            summary.replaceChildren(title, list);
+            summary.hidden = false;
+            summary.focus();
+
+            if (firstField) {
+                setTimeout(() => firstField.focus(), 80);
+            }
+        };
+
+        const validateFile = () => {
+            const file = fileInput.files[0];
+            if (!file) return 'Debes adjuntar tu currículum.';
+            if (file.size > MAX_FILE_SIZE) return 'El currículum no puede superar los 8 MB.';
+
+            const extension = file.name.includes('.') ? file.name.split('.').pop().toLowerCase() : '';
+            if (!ALLOWED_EXTENSIONS.includes(extension)) {
+                return 'El currículum debe ser PDF, DOC o DOCX.';
+            }
+            return null;
+        };
+
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            clearErrors();
+
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+
+            const fileError = validateFile();
+            if (fileError) {
+                showErrors({ curriculum: fileError });
+                return;
+            }
+
+            submitButton.disabled = true;
+            submitButton.textContent = 'Enviando…';
+            status.textContent = 'Enviando tu postulación de forma segura…';
+
+            try {
+                const response = await fetch(form.action, {
+                    method: 'POST',
+                    body: new FormData(form),
+                    headers: { 'Accept': 'application/json' },
+                    credentials: 'same-origin'
+                });
+
+                let payload = {};
+                try {
+                    payload = await response.json();
+                } catch (_) {
+                    throw new Error('Respuesta inválida del servidor.');
+                }
+
+                if (!response.ok || !payload.ok) {
+                    if (response.status === 422 && payload.errors) {
+                        showErrors(payload.errors);
+                    }
+                    throw new Error(payload.message || 'No fue posible enviar la postulación.');
+                }
+
+                form.reset();
+                if (payload.csrf_token) csrfInput.value = payload.csrf_token;
+                updateNationalityFields();
+                summary.hidden = true;
+                status.textContent = payload.message || 'Postulación enviada correctamente.';
+                status.className = 'status success';
+                status.focus?.();
+            } catch (error) {
+                if (!summary.hidden) {
+                    status.textContent = 'Corrige los campos indicados e intenta nuevamente.';
+                } else {
+                    status.textContent = error.message || 'Ocurrió un error al enviar. Intenta nuevamente.';
+                }
+                status.className = 'status error';
+            } finally {
+                submitButton.disabled = false;
+                submitButton.textContent = 'Enviar postulación';
+            }
+        });
     });
-});
+})();
